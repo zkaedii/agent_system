@@ -1,0 +1,27 @@
+# Auto-labeling configuration for PRs
+
+frontend:
+  - changed-files:
+    - any-glob-to-any-file: 'frontend/**/*'
+
+documentation:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '*.md'
+      - 'docs/**/*'
+
+config:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.config.js'
+      - '**/*.config.ts'
+      - '**/tsconfig*.json'
+      - '.github/**/*'
+
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'package.json'
+      - 'package-lock.json'
+      - '**/package.json'
+      - '**/package-lock.json'

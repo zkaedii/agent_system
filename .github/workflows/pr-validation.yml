@@ -1,0 +1,138 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  pr-metadata:
+    name: Validate PR Metadata
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check PR title
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          # Check if PR title is not empty and has reasonable length
+          if [ -z "$PR_TITLE" ] || [ ${#PR_TITLE} -lt 10 ]; then
+            echo "❌ PR title is too short. Please provide a descriptive title (at least 10 characters)."
+            exit 1
+          fi
+
+          echo "✅ PR title looks good!"
+
+      - name: Check for description
+        run: |
+          PR_BODY="${{ github.event.pull_request.body }}"
+
+          # Check if PR has a description
+          if [ -z "$PR_BODY" ]; then
+            echo "⚠️  PR has no description. Please add a description explaining your changes."
+            exit 1
+          fi
+
+          echo "✅ PR has a description!"
+
+  label-pr:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Label based on changed files
+        uses: actions/labeler@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          configuration-path: .github/labeler.yml
+        continue-on-error: true
+
+  size-label:
+    name: Label PR Size
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Calculate PR size
+        id: size
+        run: |
+          # Get number of changed lines
+          ADDITIONS=$(gh pr view ${{ github.event.pull_request.number }} --json additions -q .additions)
+          DELETIONS=$(gh pr view ${{ github.event.pull_request.number }} --json deletions -q .deletions)
+          TOTAL=$((ADDITIONS + DELETIONS))
+
+          if [ $TOTAL -lt 50 ]; then
+            echo "size=XS" >> $GITHUB_OUTPUT
+          elif [ $TOTAL -lt 200 ]; then
+            echo "size=S" >> $GITHUB_OUTPUT
+          elif [ $TOTAL -lt 500 ]; then
+            echo "size=M" >> $GITHUB_OUTPUT
+          elif [ $TOTAL -lt 1000 ]; then
+            echo "size=L" >> $GITHUB_OUTPUT
+          else
+            echo "size=XL" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add size label
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --add-label "size/${{ steps.size.outputs.size }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  check-conventional-commits:
+    name: Check Conventional Commits
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commit messages
+        run: |
+          echo "Checking commit messages for conventional commit format..."
+
+          # Get commits in this PR
+          COMMITS=$(git log --format=%s origin/${{ github.base_ref }}..HEAD)
+
+          # Basic conventional commit pattern
+          PATTERN="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+"
+
+          ERROR=0
+          while IFS= read -r commit; do
+            if ! echo "$commit" | grep -qE "$PATTERN"; then
+              echo "⚠️  Commit doesn't follow conventional format: $commit"
+              ERROR=1
+            else
+              echo "✅ $commit"
+            fi
+          done <<< "$COMMITS"
+
+          if [ $ERROR -eq 1 ]; then
+            echo ""
+            echo "Some commits don't follow conventional commit format."
+            echo "Expected format: type(scope): description"
+            echo "Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert"
+            echo ""
+            echo "This is a warning only - PR can still be merged."
+          fi
+        continue-on-error: true

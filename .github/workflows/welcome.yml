@@ -1,0 +1,45 @@
+name: Welcome New Contributors
+
+on:
+  pull_request_target:
+    types: [opened]
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  welcome:
+    name: Welcome First Time Contributors
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Welcome new contributor
+        uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            👋 Welcome to the Universal Auto Scripter IDE project!
+
+            Thank you for opening your first issue! We appreciate your contribution to making this project better.
+
+            A maintainer will review your issue soon. In the meantime:
+            - Make sure you've provided all necessary information
+            - Check if there are any similar existing issues
+            - Feel free to join our community discussions
+
+            Happy coding! 🚀
+          pr-message: |
+            👋 Welcome to the Universal Auto Scripter IDE project!
+
+            Thank you for opening your first pull request! We're excited to have you as a contributor.
+
+            Before we can merge your PR, please ensure:
+            - ✅ All CI checks pass
+            - ✅ Your code follows our coding standards
+            - ✅ You've updated documentation if needed
+            - ✅ You've added tests if applicable
+
+            A maintainer will review your PR soon. Thank you for your contribution! 🎉

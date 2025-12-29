@@ -1,0 +1,155 @@
+name: Bundle Size Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/**/*.ts'
+      - 'frontend/**/*.tsx'
+      - 'frontend/**/*.js'
+      - 'frontend/**/*.jsx'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  bundle-size:
+    name: Check Bundle Size
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies (base)
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build application (base)
+        working-directory: frontend
+        run: npm run build
+
+      - name: Save base bundle size
+        id: base-size
+        run: |
+          BASE_SIZE=$(du -sb frontend/dist | cut -f1)
+          echo "size=$BASE_SIZE" >> $GITHUB_OUTPUT
+          echo "Base bundle size: $BASE_SIZE bytes"
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: Install dependencies (PR)
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build application (PR)
+        working-directory: frontend
+        run: npm run build
+
+      - name: Calculate bundle size difference
+        id: pr-size
+        run: |
+          PR_SIZE=$(du -sb frontend/dist | cut -f1)
+          BASE_SIZE=${{ steps.base-size.outputs.size }}
+          DIFF=$((PR_SIZE - BASE_SIZE))
+          DIFF_PERCENT=$(awk "BEGIN {printf \"%.2f\", ($DIFF / $BASE_SIZE) * 100}")
+
+          echo "size=$PR_SIZE" >> $GITHUB_OUTPUT
+          echo "diff=$DIFF" >> $GITHUB_OUTPUT
+          echo "diff_percent=$DIFF_PERCENT" >> $GITHUB_OUTPUT
+
+          echo "PR bundle size: $PR_SIZE bytes"
+          echo "Difference: $DIFF bytes ($DIFF_PERCENT%)"
+
+      - name: Comment PR with bundle size
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const baseSize = ${{ steps.base-size.outputs.size }};
+            const prSize = ${{ steps.pr-size.outputs.size }};
+            const diff = ${{ steps.pr-size.outputs.diff }};
+            const diffPercent = ${{ steps.pr-size.outputs.diff_percent }};
+
+            const formatBytes = (bytes) => {
+              if (bytes === 0) return '0 Bytes';
+              const k = 1024;
+              const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(k));
+              return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+            };
+
+            const emoji = diff > 0 ? '📈' : diff < 0 ? '📉' : '➡️';
+            const status = Math.abs(diffPercent) > 10 ? '⚠️ **Warning**: Significant bundle size change!' : '✅ Bundle size change is acceptable';
+
+            const comment = `## ${emoji} Bundle Size Report
+
+            ${status}
+
+            | Metric | Size |
+            |--------|------|
+            | **Base** (${context.payload.pull_request.base.ref}) | ${formatBytes(baseSize)} |
+            | **PR** | ${formatBytes(prSize)} |
+            | **Difference** | ${diff > 0 ? '+' : ''}${formatBytes(Math.abs(diff))} (${diffPercent > 0 ? '+' : ''}${diffPercent}%) |
+
+            ${Math.abs(diffPercent) > 10 ? '\n⚠️ The bundle size has changed by more than 10%. Please review if this is expected.' : ''}
+            `;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' && comment.body.includes('Bundle Size Report')
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: comment
+              });
+            }
+
+      - name: Check bundle size threshold
+        run: |
+          DIFF_PERCENT=${{ steps.pr-size.outputs.diff_percent }}
+          THRESHOLD=20
+
+          if (( $(echo "$DIFF_PERCENT > $THRESHOLD" | bc -l) )); then
+            echo "❌ Bundle size increased by more than ${THRESHOLD}%"
+            echo "This is a critical increase and should be reviewed carefully."
+            exit 1
+          fi
+
+          if (( $(echo "$DIFF_PERCENT < -$THRESHOLD" | bc -l) )); then
+            echo "⚠️  Bundle size decreased by more than ${THRESHOLD}%"
+            echo "This is unusual and should be verified."
+          fi
+
+          echo "✅ Bundle size change is within acceptable limits"

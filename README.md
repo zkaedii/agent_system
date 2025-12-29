@@ -1,8 +1,28 @@
 # Universal Auto Scripter IDE
 ## Full Spectrum Enterprise Development Environment
 
+![CI](https://github.com/zkaedii/agent_system/workflows/CI/badge.svg)
+![Deploy](https://github.com/zkaedii/agent_system/workflows/Deploy%20to%20Production/badge.svg)
+![CodeQL](https://github.com/zkaedii/agent_system/workflows/CodeQL%20Security%20Scan/badge.svg)
+
 ### 🎯 **Project Vision**
 A comprehensive, AI-powered, universal IDE designed for full development teams with intelligent automation, battle-tested rewards systems, and enterprise-grade architecture. This IDE supports any language, any framework, any project type with smart auto-scripting capabilities and collaborative team features.
+
+---
+
+## 🔄 **CI/CD & Automation**
+
+This project uses comprehensive GitHub Actions workflows for continuous integration, deployment, and automation:
+
+- **🔄 Continuous Integration**: Automated linting, type-checking, and building on every push and PR
+- **🚀 Continuous Deployment**: Automatic deployment to GitHub Pages on main branch updates
+- **🔒 Security Scanning**: CodeQL security analysis and dependency vulnerability checks
+- **📦 Bundle Size Monitoring**: Automatic bundle size tracking and threshold enforcement
+- **🏷️ Auto-labeling**: Intelligent PR labeling based on changed files and size
+- **👋 Contributor Welcoming**: Automated welcome messages for first-time contributors
+- **🤖 Dependency Updates**: Automated dependency updates via Dependabot
+
+For detailed information about all workflows, see [Workflows Documentation](.github/WORKFLOWS.md).
 
 ---
 
