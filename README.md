@@ -764,6 +764,4 @@ This project is licensed under the Enterprise Open Source License - see the [LIC
 
 ## 🌟 **Acknowledgments**
 
-Built with passion by developers, for developers. Special thanks to the open-source community and all contributors who make this vision possible.
-
-**The Universal Auto Scripter IDE - Where Intelligence Meets Development Excellence**
+Built with passion by zkaedii ai.
