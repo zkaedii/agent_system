@@ -48,27 +48,38 @@ export const AIAssistant: React.FC = () => {
   const generateAIResponse = (userInput: string): string => {
     const lower = userInput.toLowerCase();
 
-    if (lower.includes('hello') || lower.includes('hi')) {
-      return "👋 Hello! I'm here to help you code. What would you like to work on?";
-    }
+    // Pattern definitions: each pattern has keywords and a corresponding response
+    const responsePatterns = [
+      {
+        keywords: ['hello', 'hi'],
+        response: "👋 Hello! I'm here to help you code. What would you like to work on?"
+      },
+      {
+        keywords: ['function', 'create'],
+        response: "I can help you create a function! Here's a template:\n\n```typescript\nfunction myFunction(param: string): void {\n  // Your code here\n  console.log(param);\n}\n```\n\nWould you like me to customize this for your specific use case?"
+      },
+      {
+        keywords: ['bug', 'error', 'fix'],
+        response: "🐛 Let me help debug that! To assist you better, please:\n\n1. Share the error message\n2. Show me the relevant code\n3. Describe what you expected vs. what happened\n\nI'll analyze it and suggest fixes!"
+      },
+      {
+        keywords: ['optimize', 'improve'],
+        response: "⚡ I can help optimize your code! Here are some general tips:\n\n• Use efficient data structures\n• Avoid unnecessary loops\n• Cache computed values\n• Use async/await for I/O operations\n\nShare your code and I'll provide specific suggestions!"
+      },
+      {
+        keywords: ['explain', 'what is'],
+        response: "📚 I'd be happy to explain that concept! Could you be more specific about what you'd like to understand? I can explain:\n\n• Programming concepts\n• Code patterns\n• Best practices\n• Framework features"
+      }
+    ];
 
-    if (lower.includes('function') || lower.includes('create')) {
-      return "I can help you create a function! Here's a template:\n\n```typescript\nfunction myFunction(param: string): void {\n  // Your code here\n  console.log(param);\n}\n```\n\nWould you like me to customize this for your specific use case?";
-    }
+    // Find the first matching pattern
+    const matchedPattern = responsePatterns.find(pattern =>
+      pattern.keywords.some(keyword => lower.includes(keyword))
+    );
 
-    if (lower.includes('bug') || lower.includes('error') || lower.includes('fix')) {
-      return "🐛 Let me help debug that! To assist you better, please:\n\n1. Share the error message\n2. Show me the relevant code\n3. Describe what you expected vs. what happened\n\nI'll analyze it and suggest fixes!";
-    }
-
-    if (lower.includes('optimize') || lower.includes('improve')) {
-      return "⚡ I can help optimize your code! Here are some general tips:\n\n• Use efficient data structures\n• Avoid unnecessary loops\n• Cache computed values\n• Use async/await for I/O operations\n\nShare your code and I'll provide specific suggestions!";
-    }
-
-    if (lower.includes('explain') || lower.includes('what is')) {
-      return "📚 I'd be happy to explain that concept! Could you be more specific about what you'd like to understand? I can explain:\n\n• Programming concepts\n• Code patterns\n• Best practices\n• Framework features";
-    }
-
-    return `I understand you're asking about: "${userInput}"\n\nI'm here to assist with:\n• Writing and debugging code\n• Explaining concepts\n• Code optimization\n• Best practices\n• Framework guidance\n\nHow can I help you with this specifically?`;
+    // Return matched response or default response
+    return matchedPattern?.response ??
+      `I understand you're asking about: "${userInput}"\n\nI'm here to assist with:\n• Writing and debugging code\n• Explaining concepts\n• Code optimization\n• Best practices\n• Framework guidance\n\nHow can I help you with this specifically?`;
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
